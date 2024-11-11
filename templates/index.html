@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MAC Checker</title>
+    <style>
+        /* Basic Reset */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        @keyframes disco {
+                0% { color: #FF0000; }
+                20% { color: #FF7F00; }
+                40% { color: #FFFF00; }
+                60% { color: #00FF00; }
+                80% { color: #0000FF; }
+                100% { color: #8B00FF; }
+            }
+        /* Body Styling */
+        body {
+            background-color: black;
+            color: white;
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            text-align: center;
+        }
+
+        /* Form Container Styling */
+        form {
+            display: block;
+            margin-top: 50px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+        }
+
+        input[type="text"] {
+            padding: 10px;
+            font-size: 16px;
+            margin-bottom: 15px;
+            width: 100%;
+            max-width: 300px;
+            background-color: #222;
+            color: white;
+            border: 1px solid #444;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        /* Output Styling */
+        h2 {
+            margin-top: 30px;
+        }
+        h1 {
+            animation: disco 0.1s infinite;
+        }
+
+        pre {
+            background-color: #222;
+            padding: 10px;
+            font-size: 14px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            color: #fff;
+            margin-top: 20px;
+            text-align: left;
+        }
+
+        p {
+            margin-top: 10px;
+            font-size: 16px;
+        }
+
+        /* Error message styling */
+        .error {
+            color: red;
+            font-size: 18px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Bindaas</h1>
+    <h2 style="font-size: 2em; background: linear-gradient(to right, red, orange, yellow, green, blue, indigo, violet); -webkit-background-clip: text; color: transparent; margin-top: 10px; text-align: center;">
+        Portal Mac Checker
+    </h2>
+
+    <form method="POST">
+        <label for="url">URL:</label>
+        <input type="text" id="url" name="url" placeholder="e.g., 4khdstreamsbox.com:80" required>
+
+        <label for="mac">MAC Address:</label>
+        <input type="text" id="mac" name="mac" placeholder="e.g., 00:14:22:01:23:45" required> <br>
+        
+        <button type="submit">Submit</button>
+    </form>
+
+    {% if error_message %}
+        <div class="error">{{ error_message }}</div> <!-- Error message will only show if it's set -->
+    {% endif %}
+
+    {% if device_info %}
+        <h2>Device Information</h2>
+        <pre>{{ device_info }}</pre>
+    {% endif %}
+
+    {% if genres %}
+        <h2>Live Categories</h2>
+        <p>{{ genres }}</p>
+    {% endif %}
+
+    {% if vod_genres %}
+        <h2>VOD Categories</h2>
+        <p>{{ vod_genres }}</p>
+    {% endif %}
+
+    {% if series_genres %}
+        <h2>Series Categories</h2>
+        <p>{{ series_genres }}</p>
+    {% endif %}
+    
+</body>
+</html>

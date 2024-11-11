@@ -1,2 +1,1 @@
-# machost
-maccci
+# m3uhost
