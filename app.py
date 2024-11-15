@@ -1,36 +1,35 @@
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, jsonify
 import hashlib
 import requests
 import json
 
 app = Flask(__name__)
 
-# MAC and device handling functions
-def mac_to_var(mac):
-    return mac.replace(":", "")
-
-def generate_md5(mac):
-    return hashlib.md5(mac.encode()).hexdigest()
-
-def generate_sha256(input_str):
-    return hashlib.sha256(input_str.encode()).hexdigest()
-
-def convert_to_uppercase(data):
-    return data.upper()
+# Helper functions for hash generation based on MAC
+def generate_hashes(mac):
+    sn = hashlib.md5(mac.encode('utf-8')).hexdigest().upper()
+    sn_cut = sn[:13]  # First 13 characters for SNENC
+    dev = hashlib.sha256(mac.encode('utf-8')).hexdigest().upper()
+    sg = sn_cut + '+' + mac
+    sing = hashlib.sha256(sg.encode('utf-8')).hexdigest().upper()
+    return {
+        'SN': sn,
+        'SN_CUT': sn_cut,
+        'DEV_1': dev,
+        # 'DEV_2': sing
+    }
 
 # API request handling functions
 def make_get_request(url, headers):
     try:
         response = requests.get(url, headers=headers)
-        response.raise_for_status()  # Will raise HTTPError for bad responses
-        if not response.text.strip():  # If the response body is empty
-            return None
+        response.raise_for_status()
         return response.json()
     except requests.exceptions.RequestException as e:
         print(f"Error occurred: {e}")
         return None
 
-# API functions for each genre type
+# API functions for device info and genre data
 def get_device_info(host, mac):
     url = f"http://{host}/portal.php?type=account_info&action=get_main_info&JsHttpRequest=1-xml&mac={mac}"
     headers = {'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json', 'Host': host}
@@ -51,60 +50,66 @@ def series_genres(host, mac):
     headers = {'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json', 'Host': host}
     return make_get_request(url, headers)
 
-# Function to parse and display results
-def parse_device_info(response_json):
-    device_info = response_json.get("js", {}, 'Expiry')
-    return json.dumps(device_info, indent=4) if device_info else "No device information found."
+# Function to create ITV link
+# def create_itv_link(host, mac):
+#     url = f"http://{host}/portal.php?action=create_link&type=itv&cmd=ffmpeg%20http://localhost/ch/106_&JsHttpRequest=1-xml&mac={mac}"
+#     headers = {'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json', 'Host': host}
+#     return make_get_request(url, headers)
 
+# Function to parse API responses
 def parse_genres(response_json):
     genre_list = response_json.get("js", [])
     return ", ".join([entry['title'] for entry in genre_list]) if genre_list else "No genres found."
 
-def parse_vod_genres(response_json):
-    vod_list = response_json.get("js", [])
-    return ", ".join([entry['title'] for entry in vod_list]) if vod_list else "No VOD genres found."
-
-def parse_series_genres(response_json):
-    series_list = response_json.get("js", [])
-    return ", ".join([entry['title'] for entry in series_list]) if series_list else "No series genres found."
-
-# Define your routes
+# Route to handle form submission and display results
 @app.route('/', methods=['GET', 'POST'])
 def home():
     device_info = ''
     genres = ''
-    vod_genres = ''
-    series_genres = ''
-    error_message = ''  # Initialize error_message as an empty string
+    vod_genres_list = ''
+    series_genres_list = ''
+    # itv_link_info = ''
+    error_message = ''
+    hashes = {}
 
     if request.method == 'POST':
         host = request.form['url']
         mac = request.form['mac']
 
-        mac_var = mac_to_var(mac)
-        sn = generate_md5(mac)
-        sn_enc = convert_to_uppercase(sn)
-        dev = generate_sha256(mac)
-        dev_enc = convert_to_uppercase(dev)
+        # Generate unique hashes based on MAC address
+        hashes = generate_hashes(mac)
 
         # Fetch device info and genres
-        device_info = get_device_info(host, mac)
-        if device_info:
-            device_info = parse_device_info(device_info)
+        device_info_response = get_device_info(host, mac)
+        if device_info_response:
+            device_info = json.dumps(device_info_response.get("js", {}), indent=4)
         else:
-            error_message = "Device information not found or API not working."  # Set error message if device info retrieval fails
+            error_message = "Device information not found or API not working."
 
-        genres = get_genres(host, mac)
-        if genres:
-            genres = parse_genres(genres)
-        vod_genres = get_genres(host, mac)
-        if vod_genres:
-            vod_genres = parse_genres(vod_genres)
-        series_genres = get_genres(host, mac)
-        if series_genres:
-            series_genres = parse_genres(series_genres)
+        # Fetch and parse genres data
+        genres_response = get_genres(host, mac)
+        genres = parse_genres(genres_response) if genres_response else "No genres found."
 
-    return render_template('index.html', device_info=device_info, genres=genres, vod_genres=vod_genres, series_genres=series_genres, error_message=error_message)
+        vod_genres_response = vod_genres(host, mac)
+        vod_genres_list = parse_genres(vod_genres_response) if vod_genres_response else "No VOD genres found."
+
+        series_genres_response = series_genres(host, mac)
+        series_genres_list = parse_genres(series_genres_response) if series_genres_response else "No series genres found."
+
+        # Fetch ITV link information
+        # itv_link_response = create_itv_link(host, mac)
+        # itv_link_info = json.dumps(itv_link_response, indent=4) if itv_link_response else "ITV link creation failed."
+
+    return render_template(
+        'index.html',
+        device_info=device_info,
+        genres=genres,
+        vod_genres=vod_genres_list,
+        series_genres=series_genres_list,
+        # itv_link_info=itv_link_info,
+        error_message=error_message,
+        hashes=hashes
+    )
 
 if __name__ == '__main__':
     app.run(debug=True)
